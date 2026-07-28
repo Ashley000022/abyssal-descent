@@ -1,0 +1,25 @@
+{
+  "name": "manus-abyssal-commercial",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts ManusAbyssalCommercial out/manus-abyssal-commercial.mp4 --codec=h264 --crf=16 --pixel-format=yuv420p",
+    "render:preview": "remotion render src/index.ts ManusAbyssalCommercial out/manus-abyssal-preview.mp4 --codec=h264 --crf=24 --scale=0.5 --pixel-format=yuv420p",
+    "still": "remotion still src/index.ts ManusAbyssalCommercial out/cover.png --frame=672"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.242",
+    "@remotion/google-fonts": "4.0.234",
+    "@remotion/media-utils": "4.0.242",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.242"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "typescript": "5.6.3"
+  }
+}
