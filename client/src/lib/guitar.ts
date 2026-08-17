@@ -5,9 +5,14 @@ export type ChordName =
   | "D"
   | "E"
   | "F"
+  | "F#"
   | "G"
+  | "Ab"
   | "A"
+  | "Bb"
   | "B"
+  | "Db"
+  | "Eb"
   | "Am"
   | "Em"
   | "Dm"
@@ -26,9 +31,14 @@ export const CHORD_SHAPES: Record<ChordName, ChordShape> = {
   D: [null, null, 0, 2, 3, 2],
   E: [0, 2, 2, 1, 0, 0],
   F: [1, 3, 3, 2, 1, 1],
+  "F#": [2, 4, 4, 3, 2, 2],
   G: [3, 2, 0, 0, 0, 3],
+  Ab: [4, 6, 6, 5, 4, 4],
   A: [null, 0, 2, 2, 2, 0],
+  Bb: [null, 1, 3, 3, 3, 1],
   B: [null, 2, 4, 4, 4, 2],
+  Db: [null, 4, 6, 6, 6, 4],
+  Eb: [null, 6, 8, 8, 8, 6],
   Am: [null, 0, 2, 2, 1, 0],
   Em: [0, 2, 2, 0, 0, 0],
   Dm: [null, null, 0, 2, 3, 1],
@@ -128,6 +138,9 @@ export class GuitarEngine {
   private master: GainNode | null = null;
   private volume = 0.72;
   private brightness = 0.58;
+  private arpeggioTimer: number | null = null;
+  private arpeggioSession = 0;
+  private arpeggioNodes = new Set<{ source: AudioBufferSourceNode; gain: GainNode }>();
 
   private async ensureContext() {
     if (!this.context) {
@@ -188,6 +201,58 @@ export class GuitarEngine {
     this.brightness = Math.min(1, Math.max(0, value));
   }
 
+  async activate() {
+    await this.ensureContext();
+  }
+
+  private schedulePluck(
+    context: AudioContext,
+    midi: number,
+    stringIndex: number,
+    time: number,
+    duration = 3.05,
+    gainScale = 1,
+    trackForArpeggio = false,
+  ) {
+    if (!this.input) return;
+
+    const frequency = midiToFrequency(midi);
+    const source = context.createBufferSource();
+    const filter = context.createBiquadFilter();
+    const body = context.createBiquadFilter();
+    const gain = context.createGain();
+    const pan = context.createStereoPanner();
+
+    source.buffer = makePluckBuffer(context, frequency, this.brightness);
+    filter.type = "lowpass";
+    filter.frequency.value = 3100 + this.brightness * 5200;
+    filter.Q.value = 0.48;
+    body.type = "peaking";
+    body.frequency.value = 188 + stringIndex * 34;
+    body.Q.value = 1.15;
+    body.gain.value = 2.4;
+    pan.pan.value = (stringIndex - 2.5) * 0.07;
+
+    const stringGain = (0.19 + stringIndex * 0.012) * gainScale;
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.exponentialRampToValueAtTime(stringGain, time + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+
+    source.connect(filter);
+    filter.connect(body);
+    body.connect(gain);
+    gain.connect(pan);
+    pan.connect(this.input);
+    source.start(time);
+    source.stop(time + duration + 0.1);
+
+    if (trackForArpeggio) {
+      const node = { source, gain };
+      this.arpeggioNodes.add(node);
+      source.onended = () => this.arpeggioNodes.delete(node);
+    }
+  }
+
   async playChord(chord: ChordName, direction: StrumDirection = "down", capo = 0) {
     const context = await this.ensureContext();
     if (!this.input) return;
@@ -209,40 +274,72 @@ export class GuitarEngine {
     const spacing = direction === "down" ? 0.027 : 0.021;
 
     ordered.forEach((note, orderIndex) => {
-      const frequency = midiToFrequency(note.midi);
-      const source = context.createBufferSource();
-      const filter = context.createBiquadFilter();
-      const body = context.createBiquadFilter();
-      const gain = context.createGain();
-      const pan = context.createStereoPanner();
       const time = startAt + orderIndex * spacing;
-
-      source.buffer = makePluckBuffer(context, frequency, this.brightness);
-      filter.type = "lowpass";
-      filter.frequency.value = 3100 + this.brightness * 5200;
-      filter.Q.value = 0.48;
-      body.type = "peaking";
-      body.frequency.value = 188 + note.stringIndex * 34;
-      body.Q.value = 1.15;
-      body.gain.value = 2.4;
-      pan.pan.value = (note.stringIndex - 2.5) * 0.07;
-
-      const stringGain = 0.19 + note.stringIndex * 0.012;
-      gain.gain.setValueAtTime(0.0001, time);
-      gain.gain.exponentialRampToValueAtTime(stringGain, time + 0.006);
-      gain.gain.exponentialRampToValueAtTime(0.0001, time + 3.05);
-
-      source.connect(filter);
-      filter.connect(body);
-      body.connect(gain);
-      gain.connect(pan);
-      pan.connect(this.input!);
-      source.start(time);
-      source.stop(time + 3.15);
+      this.schedulePluck(context, note.midi, note.stringIndex, time);
     });
   }
 
+  async startArpeggio(chord: ChordName, capo = 0, tempo = 108) {
+    this.stopArpeggio();
+    const session = this.arpeggioSession;
+    const context = await this.ensureContext();
+    if (session !== this.arpeggioSession || !this.input) return;
+
+    const notes = CHORD_SHAPES[chord]
+      .map((fret, stringIndex) =>
+        fret === null
+          ? null
+          : {
+              midi: OPEN_STRING_MIDI[stringIndex] + fret + capo,
+              stringIndex,
+            },
+      )
+      .filter((note): note is { midi: number; stringIndex: number } => note !== null);
+
+    const last = notes.length - 1;
+    const pattern = [0, Math.min(2, last), Math.min(3, last), 1, Math.max(1, last - 1), 2, last, Math.min(3, last)];
+    const interval = 60_000 / tempo / 2;
+    let step = 0;
+
+    const pluckNext = () => {
+      if (session !== this.arpeggioSession || !notes.length) return;
+      const note = notes[pattern[step % pattern.length]];
+      this.schedulePluck(context, note.midi, note.stringIndex, context.currentTime + 0.008, 1.34, 0.82, true);
+      step += 1;
+    };
+
+    pluckNext();
+    this.arpeggioTimer = window.setInterval(pluckNext, interval);
+  }
+
+  stopArpeggio() {
+    this.arpeggioSession += 1;
+    if (this.arpeggioTimer !== null) {
+      window.clearInterval(this.arpeggioTimer);
+      this.arpeggioTimer = null;
+    }
+
+    if (!this.context) {
+      this.arpeggioNodes.clear();
+      return;
+    }
+
+    const now = this.context.currentTime;
+    this.arpeggioNodes.forEach(({ source, gain }) => {
+      try {
+        gain.gain.cancelScheduledValues(now);
+        gain.gain.setValueAtTime(Math.max(gain.gain.value, 0.0001), now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.055);
+        source.stop(now + 0.07);
+      } catch {
+        // The source may already have naturally ended.
+      }
+    });
+    this.arpeggioNodes.clear();
+  }
+
   async mute() {
+    this.stopArpeggio();
     const context = await this.ensureContext();
     if (!this.master) return;
     const now = context.currentTime;

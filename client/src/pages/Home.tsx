@@ -1,6 +1,7 @@
 import {
   ArrowDown,
   ArrowUp,
+  Camera,
   Check,
   Headphones,
   Keyboard,
@@ -10,13 +11,15 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   GuitarEngine,
   transposeChordLabel,
   type ChordName,
   type StrumDirection,
 } from "@/lib/guitar";
+
+const CameraChordWheel = lazy(() => import("@/components/CameraChordWheel"));
 
 type Mode = "essential" | "jannabi";
 type ChordKey = {
@@ -84,8 +87,11 @@ function useIsMobile() {
 }
 
 export default function Home() {
-  const engineRef = useRef<GuitarEngine | null>(null);
+  const [engine] = useState(() => new GuitarEngine());
   const feedbackTimer = useRef<number | null>(null);
+  const [experience, setExperience] = useState<"keyboard" | "camera">(() =>
+    new URLSearchParams(window.location.search).get("mode") === "camera" ? "camera" : "keyboard",
+  );
   const [mode, setMode] = useState<Mode>("essential");
   const [capoEnabled, setCapoEnabled] = useState(true);
   const [direction, setDirection] = useState<StrumDirection>("down");
@@ -106,14 +112,12 @@ export default function Home() {
   );
 
   useEffect(() => {
-    if (!engineRef.current) engineRef.current = new GuitarEngine();
-    engineRef.current.setVolume(volume / 100);
-  }, [volume]);
+    engine.setVolume(volume / 100);
+  }, [engine, volume]);
 
   useEffect(() => {
-    if (!engineRef.current) engineRef.current = new GuitarEngine();
-    engineRef.current.setBrightness(brightness / 100);
-  }, [brightness]);
+    engine.setBrightness(brightness / 100);
+  }, [brightness, engine]);
 
   const flashKey = useCallback((key: string) => {
     setActiveKey(key);
@@ -124,27 +128,25 @@ export default function Home() {
   const play = useCallback(
     async (chord: ChordName, key: string, requestedDirection?: StrumDirection) => {
       try {
-        if (!engineRef.current) engineRef.current = new GuitarEngine();
         const actualDirection = requestedDirection ?? direction;
         flashKey(key);
         setCurrentChord(chord);
         setDirection(actualDirection);
         setHistory((previous) => [...previous.slice(-4), chord]);
-        await engineRef.current.playChord(chord, actualDirection, capo);
+        await engine.playChord(chord, actualDirection, capo);
         setAudioReady(true);
         setError(null);
       } catch {
         setError("このブラウザでは音を開始できませんでした。Chrome / Safariでお試しください。");
       }
     },
-    [capo, direction, flashKey],
+    [capo, direction, engine, flashKey],
   );
 
   const mute = useCallback(async () => {
-    if (!engineRef.current) return;
-    await engineRef.current.mute();
+    await engine.mute();
     flashKey("space");
-  }, [flashKey]);
+  }, [engine, flashKey]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -189,6 +191,20 @@ export default function Home() {
 
   const soundingChord = transposeChordLabel(currentChord, capo);
 
+  const openExperience = (next: "keyboard" | "camera") => {
+    const url = next === "camera" ? `${window.location.pathname}?mode=camera` : window.location.pathname;
+    window.history.replaceState(null, "", url);
+    setExperience(next);
+  };
+
+  if (experience === "camera") {
+    return (
+      <Suspense fallback={<div className="camera-loading-shell">LOADING CAMERA INSTRUMENT</div>}>
+        <CameraChordWheel engine={engine} onBack={() => openExperience("keyboard")} />
+      </Suspense>
+    );
+  }
+
   return (
     <main className="app-shell">
       <div className="ambient-image" aria-hidden="true" />
@@ -210,6 +226,11 @@ export default function Home() {
           </span>
           <span className="topbar-divider" />
           <span>WEB AUDIO INSTRUMENT · 01</span>
+          <button type="button" className="camera-mode-button" onClick={() => openExperience("camera")}>
+            <Camera size={13} />
+            CAMERA WHEEL
+            <b>NEW</b>
+          </button>
         </div>
       </header>
 
