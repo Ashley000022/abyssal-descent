@@ -1,10 +1,13 @@
-import { useEffect } from "react";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import { ThemeProvider } from "@/contexts/ThemeContext";
+import Home from "@/pages/Home";
 
-function App() {
-  useEffect(() => {
-    window.location.href = "/index.html";
-  }, []);
-  return null;
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <ThemeProvider defaultTheme="dark">
+        <Home />
+      </ThemeProvider>
+    </ErrorBoundary>
+  );
 }
-
-export default App;
