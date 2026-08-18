@@ -1,0 +1,45 @@
+name: SnipIME macOS
+
+on:
+  push:
+    branches: [main, "feat/snipime-macos"]
+    paths:
+      - "macos/SnipIME/**"
+      - ".github/workflows/snipime-macos.yml"
+  pull_request:
+    paths:
+      - "macos/SnipIME/**"
+      - ".github/workflows/snipime-macos.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: macos/SnipIME
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show toolchain
+        run: swift --version
+      - name: Build, test, and assemble app bundles
+        run: Scripts/build.sh
+      - name: Inspect bundles
+        run: |
+          plutil -p "build/SnipIME.app/Contents/Info.plist"
+          codesign -dvv "build/SnipIME.app" 2>&1
+          find build -maxdepth 4 -type f -print | sort
+      - name: Package unsigned development build
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent "build/SnipIME.app" "build/SnipIME.app.zip"
+          ditto -c -k --sequesterRsrc --keepParent "build/SnipIME Manager.app" "build/SnipIME-Manager.app.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SnipIME-macOS-development
+          path: |
+            macos/SnipIME/build/SnipIME.app.zip
+            macos/SnipIME/build/SnipIME-Manager.app.zip
+          if-no-files-found: error
