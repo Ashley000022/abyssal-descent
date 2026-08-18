@@ -5,6 +5,11 @@ INPUT_METHOD="$HOME/Library/Input Methods/SnipIME.app"
 MANAGER="$HOME/Applications/SnipIME Manager.app"
 DATA_DIR="$HOME/Library/Application Support/SnipIME"
 
+if [[ "$(uname -s)" != "Darwin" ]]; then
+  echo "error: uninstall.sh must run on macOS." >&2
+  exit 1
+fi
+
 remove_known_path() {
   local target="$1"
   case "$target" in
@@ -18,6 +23,14 @@ remove_known_path() {
 }
 
 killall SnipIME 2>/dev/null || true
+
+cat <<'EOF'
+先に「システム設定 → キーボード → テキスト入力 → 編集」で
+SnipIMEを入力ソースから削除し、別の入力ソースを選択してください。
+キーボード設定を開きます。準備ができたらEnterを押してください。
+EOF
+open "x-apple.systempreferences:com.apple.Keyboard-Settings.extension"
+read -r
 
 for target in "$INPUT_METHOD" "$MANAGER"; do
   if [[ -e "$target" ]]; then

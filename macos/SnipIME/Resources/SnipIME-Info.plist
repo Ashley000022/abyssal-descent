@@ -11,7 +11,7 @@
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
-    <string>im.manus.snipime.inputmethod</string>
+    <string>im.manus.inputmethod.snipime</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
@@ -29,7 +29,9 @@
     <key>InputMethodConnectionName</key>
     <string>SnipIME_Connection</string>
     <key>InputMethodServerControllerClass</key>
-    <string>SnipIME.SnipIMEInputController</string>
+    <string>SnipIMEInputController</string>
+    <key>TISInputSourceID</key>
+    <string>im.manus.inputmethod.snipime</string>
     <key>tsInputMethodCharacterRepertoireKey</key>
     <array>
         <string>Latn</string>
@@ -41,8 +43,10 @@
     <dict>
         <key>tsInputModeListKey</key>
         <dict>
-            <key>im.manus.snipime.mode.snippets</key>
+            <key>im.manus.inputmethod.snipime.mode.snippets</key>
             <dict>
+                <key>TISInputSourceID</key>
+                <string>im.manus.inputmethod.snipime.mode.snippets</string>
                 <key>TISIntendedLanguage</key>
                 <string>en</string>
             </dict>

@@ -75,5 +75,19 @@ codesign --verify --deep --strict --verbose=2 "$MANAGER_DIR"
 codesign --verify --deep --strict --verbose=2 "$APP_DIR"
 plutil -lint "$APP_DIR/Contents/Info.plist" "$MANAGER_DIR/Contents/Info.plist"
 
+IME_BUNDLE_ID="$(plutil -extract CFBundleIdentifier raw "$APP_DIR/Contents/Info.plist")"
+[[ "$IME_BUNDLE_ID" == *".inputmethod."* ]] || {
+  echo "error: IME bundle identifier must contain .inputmethod.: $IME_BUNDLE_ID" >&2
+  exit 1
+}
+[[ -x "$APP_DIR/Contents/MacOS/SnipIME" ]] || {
+  echo "error: missing SnipIME executable" >&2
+  exit 1
+}
+[[ -f "$APP_DIR/Contents/Resources/AppIcon.icns" ]] || {
+  echo "error: missing SnipIME icon" >&2
+  exit 1
+}
+
 echo
 printf 'Built:\n  %s\n  %s\n' "$APP_DIR" "$MANAGER_DIR"

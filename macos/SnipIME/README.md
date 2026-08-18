@@ -17,6 +17,8 @@
 | ローカル保存 | `~/Library/Application Support/SnipIME/snippets.json` |
 | プライバシー | ネットワーク通信、キーロギング、アクセシビリティ権限なし |
 
+保存ディレクトリは所有者のみアクセス可能な`0700`、JSONファイルは`0600`に固定します。データは通常のローカルバックアップやTime Machineの対象になり得ます。
+
 ## 必要環境
 
 - macOS 13 Ventura以降
@@ -80,13 +82,15 @@ Macのキーチェーンアクセスで、同名の**自己署名ルート／コ
 Scripts/verify.sh
 ```
 
-CIではmacOSランナー上で共有コアのテスト、IMEと管理アプリのコンパイル、app bundleとplist、署名を検証します。
+`CI/github-actions.yml`には、macOSランナー上で共有コア、IME、管理アプリ、app bundle、plist、署名を検証するGitHub Actionsテンプレートを同梱しています。リポジトリ管理者が`.github/workflows/snipime-macos.yml`へ配置すると有効になります。
 
 ## アンインストール
 
 ```bash
 Scripts/uninstall.sh
 ```
+
+スクリプトがキーボード設定を開くので、先にSnipIMEを入力ソース一覧から削除し、別の入力ソースへ切り替えてください。
 
 スニペットデータは既定では残します。データも削除する場合は次を実行します。
 
