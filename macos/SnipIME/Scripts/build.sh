@@ -6,6 +6,17 @@ BUILD_ROOT="${BUILD_ROOT:-$ROOT/build}"
 CONFIGURATION="${CONFIGURATION:-release}"
 SIGN_IDENTITY="${SIGN_IDENTITY:--}"
 
+remove_generated_path() {
+  local target="$1"
+  case "$target" in
+    ""|"/"|"$HOME")
+      echo "error: refusing to remove unsafe path: $target" >&2
+      exit 1
+      ;;
+  esac
+  [[ -e "$target" ]] && rm -R "$target"
+}
+
 if [[ "$(uname -s)" != "Darwin" ]]; then
   echo "error: SnipIME app bundles must be built on macOS." >&2
   exit 1
@@ -22,7 +33,8 @@ BIN_DIR="$(swift build -c "$CONFIGURATION" --show-bin-path)"
 
 APP_DIR="$BUILD_ROOT/SnipIME.app"
 MANAGER_DIR="$BUILD_ROOT/SnipIME Manager.app"
-rm -rf "$APP_DIR" "$MANAGER_DIR"
+remove_generated_path "$APP_DIR"
+remove_generated_path "$MANAGER_DIR"
 mkdir -p \
   "$APP_DIR/Contents/MacOS" \
   "$APP_DIR/Contents/Resources" \
@@ -37,7 +49,7 @@ cp "$ROOT/Resources/SnipIMEManager-Info.plist" "$MANAGER_DIR/Contents/Info.plist
 
 ICON_SOURCE="$ROOT/Resources/AppIcon-1024.png"
 ICONSET="$BUILD_ROOT/AppIcon.iconset"
-rm -rf "$ICONSET"
+remove_generated_path "$ICONSET"
 mkdir -p "$ICONSET"
 for size in 16 32 128 256 512; do
   double=$((size * 2))

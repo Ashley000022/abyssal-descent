@@ -77,8 +77,7 @@ Macのキーチェーンアクセスで、同名の**自己署名ルート／コ
 ## テスト
 
 ```bash
-swift test
-Scripts/build.sh
+Scripts/verify.sh
 ```
 
 CIではmacOSランナー上で共有コアのテスト、IMEと管理アプリのコンパイル、app bundleとplist、署名を検証します。

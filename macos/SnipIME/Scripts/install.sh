@@ -6,6 +6,18 @@ BUILD_ROOT="${BUILD_ROOT:-$ROOT/build}"
 INPUT_METHODS_DIR="$HOME/Library/Input Methods"
 APPS_DIR="$HOME/Applications"
 
+remove_installed_app() {
+  local target="$1"
+  case "$target" in
+    "$INPUT_METHODS_DIR/SnipIME.app"|"$APPS_DIR/SnipIME Manager.app") ;;
+    *)
+      echo "error: refusing to remove unexpected path: $target" >&2
+      exit 1
+      ;;
+  esac
+  [[ -e "$target" ]] && rm -R "$target"
+}
+
 if [[ "$(uname -s)" != "Darwin" ]]; then
   echo "error: install.sh must run on macOS." >&2
   exit 1
@@ -16,7 +28,8 @@ if [[ ! -d "$BUILD_ROOT/SnipIME.app" || ! -d "$BUILD_ROOT/SnipIME Manager.app" ]
 fi
 
 mkdir -p "$INPUT_METHODS_DIR" "$APPS_DIR"
-rm -rf "$INPUT_METHODS_DIR/SnipIME.app" "$APPS_DIR/SnipIME Manager.app"
+remove_installed_app "$INPUT_METHODS_DIR/SnipIME.app"
+remove_installed_app "$APPS_DIR/SnipIME Manager.app"
 ditto "$BUILD_ROOT/SnipIME.app" "$INPUT_METHODS_DIR/SnipIME.app"
 ditto "$BUILD_ROOT/SnipIME Manager.app" "$APPS_DIR/SnipIME Manager.app"
 

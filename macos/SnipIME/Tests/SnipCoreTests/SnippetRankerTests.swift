@@ -22,13 +22,7 @@ final class SnippetRankerTests: XCTestCase {
 
         let ranked = SnippetRanker.rank([unused, recent, frequent], query: "", now: now)
 
-        XCTAssertEqual(ranked.map(\.shortcut), ["frequent", "recent", "unused"].map {
-            switch $0 {
-            case "frequent": return "f"
-            case "recent": return "r"
-            default: return "u"
-            }
-        })
+        XCTAssertEqual(ranked.map(\.shortcut), ["f", "r", "u"])
     }
 
     func testJapaneseTitleAndWidthInsensitiveQuery() {

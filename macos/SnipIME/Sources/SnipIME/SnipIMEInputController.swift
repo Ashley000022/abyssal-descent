@@ -6,7 +6,7 @@ import SnipCore
 final class SnipIMEInputController: IMKInputController {
     private let store = SnippetStore()
     private lazy var engine = SnippetEngine(snippets: (try? store.load()) ?? [])
-    private weak var activeClient: (any IMKTextInput)?
+    private var activeClient: (any IMKTextInput)?
 
     override func inputText(_ string: String!, client sender: Any!) -> Bool {
         guard let string, let client = sender as? IMKTextInput else { return false }
@@ -108,9 +108,18 @@ final class SnipIMEInputController: IMKInputController {
 
     @objc private func openManager() {
         let standardPath = URL(fileURLWithPath: "/Applications/SnipIME Manager.app")
+        let userPath = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Applications/SnipIME Manager.app")
         let bundledPath = Bundle.main.bundleURL
             .appendingPathComponent("Contents/Library/LoginItems/SnipIME Manager.app")
-        let target = FileManager.default.fileExists(atPath: standardPath.path) ? standardPath : bundledPath
+        let target: URL
+        if FileManager.default.fileExists(atPath: standardPath.path) {
+            target = standardPath
+        } else if FileManager.default.fileExists(atPath: userPath.path) {
+            target = userPath
+        } else {
+            target = bundledPath
+        }
 
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = true

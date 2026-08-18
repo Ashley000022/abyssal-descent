@@ -277,7 +277,6 @@ final class SnippetManagerWindowController: NSWindowController, NSTableViewDataS
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.setCustomSpacing(4, after: heading)
         stack.setCustomSpacing(22, after: helper)
-        stack.setCustomSpacing(4, after: makePlaceholderReference())
 
         [helper, titleField, shortcutField, contentScroll, usageLabel].forEach {
             $0.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
@@ -326,10 +325,6 @@ final class SnippetManagerWindowController: NSWindowController, NSTableViewDataS
         label.font = .systemFont(ofSize: 12, weight: .semibold)
         label.textColor = .secondaryLabelColor
         return label
-    }
-
-    private func makePlaceholderReference() -> NSTextField {
-        NSTextField(labelWithString: "")
     }
 
     private func reload(selecting id: UUID?) {
